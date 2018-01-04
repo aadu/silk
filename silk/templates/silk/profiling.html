@@ -12,6 +12,7 @@
 
 {% block style %}
     {{ block.super }}
+    <link rel="stylesheet" href="{% static 'silk/css/summary.css' %}">
     <style>
         .name-div {
             font-weight: bold;
@@ -21,10 +22,6 @@
             padding: 0 1em;
         }
 
-        .description {
-
-        }
-
         h2 {
             margin-bottom: 10px;
         }
@@ -32,9 +29,28 @@
         .pyprofile {
             overflow: scroll;
             max-height: 650px;
+            text-align: left;
+        }
+
+        #graph-div {
+            padding: 25px;
+            background-color: white;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 25px;
+            width: 960px;
+            text-align: center;
+        }
+
+        #percent {
+            width: 20px;
+        }
+
+        svg {
+            display: block;
         }
     </style>
-
 {% endblock %}
 
 {% block filter %}
@@ -72,9 +88,10 @@
 {% endblock %}
 
 {% block js %}
+    <script type="text/javascript" src="{% static 'silk/lib/viz-lite.js' %}"></script>
+    <script type="text/javascript" src="{% static 'silk/lib/svg-pan-zoom.min.js' %}"></script>
     {{ block.super }}
     <script>
-
         $(document).ready(function () {
             initFilters();
             initFilterButton();
@@ -252,6 +269,44 @@
             </div>
         </div>
     {% endif %}
+
+    {% if silk_request.prof_file %}
+    <div class="container">
+        <h2>Profile Graph</h2>
+    <div class="description">
+        Below is a graph of the profile, with the nodes coloured by the time taken (red is more time). This should give a good indication of the slowest path through the profiled code.</div>
+
+        <span>Prune nodes taking up less than </span>
+        <input id='percent' type="text" value='5'
+                onkeypress='return event.charCode >= 48 && event.charCode <= 57 && $("#percent").val().length < 2'
+                oninput="createViz()"
+        >
+
+        </input>
+        <span>% of the total time</span>
+
+    </div>
+    <div id="graph-div">
+    </div>
+    </div>
+    <script>
+        function createViz() {
+            $.get(
+                "{% url 'silk:request_profile_dot' request_id=silk_request.pk %}",
+                { cutoff: $('#percent').val() },
+                function (response) {
+                    var svg = '#graph-div';
+                    $(svg).html(Viz(response.dot));
+                    $(svg + ' svg').attr('width', 960).attr('height', 600);
+                    svgPanZoom(svg + ' svg', { controlIconsEnabled: true });
+                }
+            );
+        }
+        createViz();
+    </script>
+{% endif %}
+
+
     {% if silk_request.pyprofile %}
         <div class="container">
             <h2>Python Profiler</h2>
